@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CodeMate Weather</title>
+  <meta name="description" content="Clima en tiempo real para cualquier ciudad del mundo. Proyecto vanilla JS por CodeMate, con La Plata como ciudad por defecto." />
+
+  <!-- Google Fonts: display + body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css?v=2" />
+</head>
+<body>
+
+  <!-- Fondo animado que cambia según el momento del día -->
+  <div class="sky" id="sky" aria-hidden="true">
+    <div class="sky__sun-moon" id="skyBody"></div>
+    <div class="sky__cloud sky__cloud--1"></div>
+    <div class="sky__cloud sky__cloud--2"></div>
+  </div>
+
+  <main class="app">
+
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand__dot"></span>
+        <span class="brand__name">CodeMate<span class="brand__accent">Weather</span></span>
+      </div>
+      <button class="unit-toggle" id="unitToggle" type="button" aria-pressed="false">
+        °C
+      </button>
+    </header>
+
+    <!-- Buscador de ciudad -->
+    <div class="search">
+      <input
+        type="text"
+        id="searchInput"
+        class="search__input"
+        placeholder="Buscar ciudad o país…"
+        autocomplete="off"
+      />
+      <ul class="search__results" id="searchResults" hidden></ul>
+    </div>
+
+    <!-- Estado de carga / error -->
+    <div class="status" id="status">
+      <p id="statusText">Buscando el cielo de La Plata…</p>
+      <button class="retry-btn" id="retryBtn" type="button" hidden>Reintentar</button>
+    </div>
+
+    <!-- HERO: condición actual -->
+    <section class="hero" id="hero" hidden>
+      <p class="hero__eyebrow" id="dateNow">—</p>
+      <h1 class="hero__city" id="cityName">La Plata, Buenos Aires</h1>
+
+      <div class="hero__main">
+        <div class="hero__icon" id="currentIcon" aria-hidden="true"></div>
+        <div class="hero__temp-wrap">
+          <span class="hero__temp" id="currentTemp">--</span>
+          <span class="hero__unit">°</span>
+        </div>
+      </div>
+
+      <p class="hero__desc" id="currentDesc">—</p>
+      <p class="hero__feels">Sensación térmica <strong id="feelsLike">--°</strong></p>
+
+      <div class="stats">
+        <div class="stats__item">
+          <span class="stats__label">Humedad</span>
+          <span class="stats__value" id="humidity">--%</span>
+        </div>
+        <div class="stats__item">
+          <span class="stats__label">Viento</span>
+          <span class="stats__value" id="wind">-- km/h</span>
+        </div>
+        <div class="stats__item">
+          <span class="stats__label">Precipitación</span>
+          <span class="stats__value" id="rainChance">--%</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pronóstico por hora -->
+    <section class="hourly" id="hourlySection" hidden>
+      <h2 class="section-title">Próximas horas</h2>
+      <div class="hourly__scroll" id="hourlyScroll"></div>
+    </section>
+
+    <!-- Pronóstico 6 días -->
+    <section class="daily" id="dailySection" hidden>
+      <h2 class="section-title">Próximos días</h2>
+      <div class="daily__list" id="dailyList"></div>
+    </section>
+
+    <footer class="footer">
+      <p>Datos de <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> · Hecho por <a href="https://github.com/devCODEMATE" target="_blank" rel="noopener">CodeMate</a></p>
+    </footer>
+
+  </main>
+
+  <script src="app.js?v=2"></script>
+</body>
+</html>
