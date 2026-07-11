@@ -101,6 +101,7 @@ let state = {
   location: loadSavedLocation(),
   favorites: loadSavedFavorites(),
   lastErrorTimedOut: false,
+  lastParticleSeason: null,
 };
 
 function loadSavedLocation() {
@@ -183,6 +184,7 @@ const el = {
 
   sky: document.getElementById("sky"),
   skyBody: document.getElementById("skyBody"),
+  particles: document.getElementById("particles"),
 
   cityName: document.getElementById("cityName"),
   favBtn: document.getElementById("favBtn"),
@@ -390,6 +392,49 @@ function updateSky(hourNow, isDay, weatherIcon, season) {
   document.documentElement.style.setProperty("--sky-bottom", bottom);
 }
 
+// Configuración de partículas por estación: clase CSS, cantidad y rango de
+// duración de caída (segundos). El verano se queda sin partículas a propósito
+// — ya tiene bastante vida con el sol y el cielo despejado.
+const SEASON_PARTICLES = {
+  winter: { className: "particle--snow", count: 12, minDuration: 9, maxDuration: 16 },
+  autumn: { className: "particle--leaf", count: 8, minDuration: 7, maxDuration: 12 },
+  spring: { className: "particle--petal", count: 7, minDuration: 10, maxDuration: 17 },
+  summer: null,
+};
+
+function renderParticles(season, weatherIcon) {
+  // Durante tormenta ocultamos las partículas: el cielo ya está lo
+  // suficientemente cargado con el rayo, no hace falta sumar más ruido visual.
+  const config = weatherIcon === "storm" ? null : SEASON_PARTICLES[season];
+  const particleKey = config ? season : "none";
+
+  // Si ya están las partículas correctas dibujadas, no las regeneramos —
+  // evita cortar la animación de caída en cada refresco de datos.
+  if (state.lastParticleSeason === particleKey) return;
+  state.lastParticleSeason = particleKey;
+
+  el.particles.innerHTML = "";
+  if (!config) return;
+
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < config.count; i++) {
+    const particle = document.createElement("div");
+    particle.className = `particle ${config.className}`;
+
+    const duration = config.minDuration + Math.random() * (config.maxDuration - config.minDuration);
+    const delay = Math.random() * duration; // arranque escalonado, no todas juntas
+    const drift = `${Math.round(Math.random() * 70 - 35)}px`;
+
+    particle.style.left = `${Math.random() * 100}%`;
+    particle.style.animationDuration = `${duration.toFixed(1)}s`;
+    particle.style.animationDelay = `-${delay.toFixed(1)}s`;
+    particle.style.setProperty("--drift", drift);
+
+    fragment.appendChild(particle);
+  }
+  el.particles.appendChild(fragment);
+}
+
 // ---------- Formato de temperatura ----------
 
 function formatTemp(celsius) {
@@ -457,6 +502,7 @@ function renderCurrent(data) {
   const currentHour = Number(current.time.slice(11, 13));
   const season = getSeason(state.location.latitude, current.time);
   updateSky(currentHour, isDay, info.icon, season);
+  renderParticles(season, info.icon);
 }
 
 function roundToHour(isoString) {

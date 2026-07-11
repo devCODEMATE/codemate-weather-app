@@ -123,6 +123,52 @@ body {
   animation-delay: -20s;
 }
 
+/* ---------- Partículas estacionales ---------- */
+
+.particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  top: -5%;
+  animation-name: particle-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes particle-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 0.85; }
+  92% { opacity: 0.7; }
+  100% { transform: translate(var(--drift, 20px), 112vh) rotate(200deg); opacity: 0; }
+}
+
+.particle--snow {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.6);
+}
+
+.particle--leaf {
+  width: 10px;
+  height: 10px;
+  background: #c98f5e;
+  clip-path: polygon(50% 0%, 100% 45%, 65% 100%, 50% 75%, 35% 100%, 0% 45%);
+}
+
+.particle--petal {
+  width: 8px;
+  height: 8px;
+  border-radius: 50% 0 50% 50%;
+  background: rgba(255, 255, 255, 0.8);
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-14px); }
