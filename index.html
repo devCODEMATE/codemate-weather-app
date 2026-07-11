@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css?v=6" />
+  <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -48,12 +48,57 @@
         placeholder="Search city or country…"
         autocomplete="off"
       />
+      <button class="geo-btn" id="geoBtn" type="button" aria-label="Use my location">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="12" r="5" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </button>
       <ul class="search__results" id="searchResults" hidden></ul>
+      <p class="geo-error" id="geoError" hidden></p>
     </div>
 
-    <!-- Loading / error state -->
-    <div class="status" id="status">
-      <p id="statusText">Loading the sky over La Plata…</p>
+    <!-- Screen-reader-only live status, so loading/errors are announced -->
+    <p class="sr-only" id="srStatus" aria-live="polite"></p>
+
+    <!-- Skeleton shown while the first request for a new location is in flight -->
+    <div class="skeleton" id="skeleton" aria-hidden="true">
+      <div class="skeleton__hero">
+        <div class="skeleton__line skeleton__line--eyebrow"></div>
+        <div class="skeleton__line skeleton__line--city"></div>
+        <div class="skeleton__row">
+          <div class="skeleton__circle"></div>
+          <div class="skeleton__line skeleton__line--temp"></div>
+        </div>
+        <div class="skeleton__line skeleton__line--desc"></div>
+        <div class="skeleton__stats">
+          <div class="skeleton__block"></div>
+          <div class="skeleton__block"></div>
+          <div class="skeleton__block"></div>
+        </div>
+      </div>
+      <div class="skeleton__hourly">
+        <div class="skeleton__line skeleton__line--title"></div>
+        <div class="skeleton__hourly-row">
+          <div class="skeleton__hour-card"></div>
+          <div class="skeleton__hour-card"></div>
+          <div class="skeleton__hour-card"></div>
+          <div class="skeleton__hour-card"></div>
+          <div class="skeleton__hour-card"></div>
+        </div>
+      </div>
+      <div class="skeleton__daily">
+        <div class="skeleton__line skeleton__line--title"></div>
+        <div class="skeleton__day-row"></div>
+        <div class="skeleton__day-row"></div>
+        <div class="skeleton__day-row"></div>
+        <div class="skeleton__day-row"></div>
+      </div>
+    </div>
+
+    <!-- Error state (the skeleton hides and this takes over if the request fails) -->
+    <div class="status" id="status" hidden>
+      <p id="statusText">—</p>
       <button class="retry-btn" id="retryBtn" type="button" hidden>Retry</button>
     </div>
 
@@ -110,6 +155,6 @@
 
   </main>
 
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

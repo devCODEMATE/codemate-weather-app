@@ -45,6 +45,11 @@ const UI_TEXT = {
     footerMade: "Made by",
     dateLocale: "en-US",
     geocodingLang: "en",
+    useMyLocation: "Use my location",
+    locating: "Locating…",
+    geoNotSupported: "Your browser doesn't support geolocation.",
+    geoDenied: "Location access was denied.",
+    geoUnavailable: "We couldn't get your location. Try again.",
   },
   es: {
     searchPlaceholder: "Buscar ciudad o país…",
@@ -66,6 +71,11 @@ const UI_TEXT = {
     footerMade: "Hecho por",
     dateLocale: "es-AR",
     geocodingLang: "es",
+    useMyLocation: "Usar mi ubicación",
+    locating: "Buscando tu ubicación…",
+    geoNotSupported: "Tu navegador no soporta geolocalización.",
+    geoDenied: "Se denegó el acceso a tu ubicación.",
+    geoUnavailable: "No pudimos obtener tu ubicación. Probá de nuevo.",
   },
 };
 
@@ -113,7 +123,9 @@ function buildForecastUrl(location) {
     `&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,weather_code,wind_speed_10m` +
     `&hourly=temperature_2m,weather_code,precipitation_probability` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
-    `&timezone=${encodeURIComponent(location.timezone)}&forecast_days=7`
+    // "auto" lets Open-Meteo resolve the IANA timezone from the coordinates —
+    // handy for geolocated positions, where we don't already have a timezone name.
+    `&timezone=auto&forecast_days=7`
   );
 }
 
@@ -123,6 +135,8 @@ const el = {
   status: document.getElementById("status"),
   statusText: document.getElementById("statusText"),
   retryBtn: document.getElementById("retryBtn"),
+  skeleton: document.getElementById("skeleton"),
+  srStatus: document.getElementById("srStatus"),
   hero: document.getElementById("hero"),
   hourlySection: document.getElementById("hourlySection"),
   dailySection: document.getElementById("dailySection"),
@@ -148,6 +162,8 @@ const el = {
 
   searchInput: document.getElementById("searchInput"),
   searchResults: document.getElementById("searchResults"),
+  geoBtn: document.getElementById("geoBtn"),
+  geoError: document.getElementById("geoError"),
 
   hourlyTitle: document.getElementById("hourlyTitle"),
   dailyTitle: document.getElementById("dailyTitle"),
@@ -465,6 +481,7 @@ function applyStaticText() {
   el.footerMadeText.textContent = strings.footerMade;
   el.retryBtn.textContent = strings.retry;
   el.langToggle.textContent = state.lang.toUpperCase();
+  el.geoBtn.setAttribute("aria-label", strings.useMyLocation);
 }
 
 function renderAll() {
@@ -480,9 +497,10 @@ function renderAll() {
 // ---------- Fetch principal ----------
 
 async function loadWeather() {
-  // Mostramos el estado de carga y ocultamos resultados previos
-  el.status.hidden = false;
-  el.statusText.textContent = t().loading(state.location.name);
+  // Mostramos el skeleton (visual) y anunciamos el estado a lectores de pantalla
+  el.status.hidden = true;
+  el.skeleton.hidden = false;
+  el.srStatus.textContent = t().loading(state.location.name);
   el.retryBtn.hidden = true;
   el.retryBtn.textContent = t().retry;
   el.hero.hidden = true;
@@ -504,23 +522,96 @@ async function loadWeather() {
 
     const data = await response.json();
     state.data = data;
+    // "timezone=auto" en la URL hace que Open-Meteo nos devuelva el IANA
+    // timezone real de esas coordenadas — lo guardamos para el formato de fechas.
+    if (data.timezone) {
+      state.location.timezone = data.timezone;
+      saveLocation(state.location);
+    }
 
-    el.status.hidden = true;
+    el.skeleton.hidden = true;
     el.hero.hidden = false;
     el.hourlySection.hidden = false;
     el.dailySection.hidden = false;
 
     renderAll();
+    el.srStatus.textContent = "";
   } catch (error) {
     clearTimeout(timeoutId);
     console.error("No se pudo obtener el clima:", error);
 
     const timedOut = error.name === "AbortError";
     state.lastErrorTimedOut = timedOut;
-    el.statusText.textContent = timedOut ? t().timeoutError : t().loadError;
+    const message = timedOut ? t().timeoutError : t().loadError;
+
+    el.skeleton.hidden = true;
+    el.status.hidden = false;
+    el.statusText.textContent = message;
+    el.srStatus.textContent = message;
     el.retryBtn.hidden = false;
   }
 }
+
+// ---------- Geolocalización ----------
+
+async function reverseGeocode(latitude, longitude) {
+  const url =
+    `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}` +
+    `&longitude=${longitude}&localityLanguage=${t().geocodingLang}`;
+
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
+  const data = await response.json();
+
+  return {
+    name: data.city || data.locality || data.principalSubdivision || "—",
+    place: [data.principalSubdivision, data.countryName].filter(Boolean).join(", "),
+  };
+}
+
+function setGeoLoading(isLoading) {
+  el.geoBtn.disabled = isLoading;
+  el.geoBtn.classList.toggle("is-loading", isLoading);
+}
+
+el.geoBtn.addEventListener("click", () => {
+  el.geoError.hidden = true;
+
+  if (!navigator.geolocation) {
+    el.geoError.textContent = t().geoNotSupported;
+    el.geoError.hidden = false;
+    return;
+  }
+
+  setGeoLoading(true);
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        const place = await reverseGeocode(latitude, longitude);
+        state.location = { name: place.name, place: place.place, latitude, longitude };
+        saveLocation(state.location);
+
+        el.searchInput.value = "";
+        el.searchResults.hidden = true;
+        loadWeather();
+      } catch (error) {
+        console.error("No se pudo resolver la ubicación:", error);
+        el.geoError.textContent = t().geoUnavailable;
+        el.geoError.hidden = false;
+      } finally {
+        setGeoLoading(false);
+      }
+    },
+    (error) => {
+      setGeoLoading(false);
+      el.geoError.textContent = error.code === 1 ? t().geoDenied : t().geoUnavailable;
+      el.geoError.hidden = false;
+    },
+    { timeout: 8000, maximumAge: 5 * 60 * 1000 }
+  );
+});
 
 // ---------- Buscador de ciudad (Open-Meteo Geocoding) ----------
 
@@ -582,6 +673,7 @@ function selectCity(result) {
 el.searchInput.addEventListener("input", () => {
   const query = el.searchInput.value.trim();
 
+  el.geoError.hidden = true;
   clearTimeout(searchDebounceId);
 
   if (query.length < 2) {
@@ -643,10 +735,12 @@ el.langToggle.addEventListener("click", () => {
     renderAll();
   } else if (!el.retryBtn.hidden) {
     // Se está mostrando un error: actualizamos ese texto al nuevo idioma
-    el.statusText.textContent = state.lastErrorTimedOut ? t().timeoutError : t().loadError;
+    const message = state.lastErrorTimedOut ? t().timeoutError : t().loadError;
+    el.statusText.textContent = message;
+    el.srStatus.textContent = message;
   } else {
-    // Todavía está cargando
-    el.statusText.textContent = t().loading(state.location.name);
+    // Todavía está cargando (skeleton visible)
+    el.srStatus.textContent = t().loading(state.location.name);
   }
 });
 
