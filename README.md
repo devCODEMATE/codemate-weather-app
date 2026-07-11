@@ -11,10 +11,11 @@ A weather app built with **vanilla HTML, CSS and JavaScript** — no frameworks,
 
 **Live demo:** https://devcodemate.github.io/codemate-weather-app/
 
-![Weather in Genoa, Italy — summer](./screenshots/summer-genoa.png)
-![Weather in La Plata, Argentina — winter](./screenshots/winter-la-plata.png)
+![Weather in Genoa, Italy — summer](./images/Genova-f.png)
+![Weather in La Plata, Argentina — winter, °C](./images/LaPlata-c.png)
+![Weather in La Plata, Argentina — winter, °F](./images/LaPlata-f.png)
 
-> Same UI, two hemispheres, two seasons — the sky palette is calculated from the searched city's latitude and the current month, not hardcoded to one location.
+> Same UI, two hemispheres, two seasons — the sky palette is calculated from the searched city's latitude and the current month, not hardcoded to one location. The last two shots also show the °C / °F toggle in action.
 
 ## Features
 
@@ -42,9 +43,12 @@ A weather app built with **vanilla HTML, CSS and JavaScript** — no frameworks,
 
 ```
 codemate-weather-app/
-├── index.html   # Markup and content
-├── style.css    # Styling, animated sky, seasonal palettes, responsive layout
-└── app.js       # Weather fetch, geocoding search, i18n, rendering logic
+├── index.html      # Markup and content
+├── style.css       # Styling, animated sky, seasonal palettes, responsive layout
+├── app.js          # Weather fetch, geocoding search, i18n, rendering logic
+├── utils.js        # Pure functions (temperature, hour, season, weather) — unit-tested with Vitest
+└── tests/
+    └── utils.test.js
 ```
 
 No build step: it's static HTML/CSS/JS, so any static file server works.
@@ -57,6 +61,25 @@ cd codemate-weather-app
 ```
 
 Open `index.html` with a local server (for example, the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension in VS Code). Opening the file directly (`file://`) will break the `fetch` calls to the API — a local server is required.
+
+## Running the tests
+
+The pure logic (temperature conversion, hour formatting, seasonal calculation, weather code lookup) lives in `utils.js`, separate from the DOM code in `app.js`, so it can be unit-tested with [Vitest](https://vitest.dev/) without a browser:
+
+```bash
+npm install
+npm test
+```
+
+```
+tests/utils.js (17)
+  ✓ formatTemp (3)
+  ✓ roundToHour (2)
+  ✓ formatHour (2)
+  ✓ getSeason (4)
+  ✓ locationKey (2)
+  ✓ getWeatherInfo (4)
+```
 
 ## How the seasonal sky works
 
@@ -88,14 +111,15 @@ This project is open source and available for learning purposes.
 <a id="español"></a>
 ## Español
 
-Una app del clima construida con **HTML, CSS y JavaScript vanilla** — sin frameworks ni herramientas de build. Buscá cualquier ciudad del mundo y obtené el estado actual, pronóstico por hora y a 7 días, envuelto en un cielo animado que cambia según la hora del día, el clima y la estación del año.
+Una app del clima construida con **HTML, CSS y JavaScript vainilla** — sin frameworks ni herramientas de build. Buscá cualquier ciudad del mundo y obtené el estado actual, pronóstico por hora y a 7 días, envuelto en un cielo animado que cambia según la hora del día, el clima y la estación del año.
 
 **Demo en vivo:** https://devcodemate.github.io/codemate-weather-app/
 
-![Clima en Génova, Italia — verano](./screenshots/summer-genoa.png)
-![Clima en La Plata, Argentina — invierno](./screenshots/winter-la-plata.png)
+![Clima en Génova, Italia — verano](./images/Genova-f.png)
+![Clima en La Plata, Argentina — invierno, °C](./images/LaPlata-c.png)
+![Clima en La Plata, Argentina — invierno, °F](./images/LaPlata-f.png)
 
-> Misma interfaz, dos hemisferios, dos estaciones — la paleta del cielo se calcula según la latitud de la ciudad buscada y el mes actual, no está fija a una sola ubicación.
+> Misma interfaz, dos hemisferios, dos estaciones — la paleta del cielo se calcula según la latitud de la ciudad buscada y el mes actual, no está fija a una sola ubicación. Las últimas dos capturas también muestran el selector °C / °F en acción.
 
 ### Funcionalidades
 
@@ -123,9 +147,12 @@ Una app del clima construida con **HTML, CSS y JavaScript vanilla** — sin fram
 
 ```
 codemate-weather-app/
-├── index.html   # Markup y contenido
-├── style.css    # Estilos, cielo animado, paletas estacionales, diseño responsive
-└── app.js       # Fetch del clima, buscador con geocoding, i18n, lógica de renderizado
+├── index.html      # Markup y contenido
+├── style.css       # Estilos, cielo animado, paletas estacionales, diseño responsive
+├── app.js          # Fetch del clima, buscador con geocoding, i18n, lógica de renderizado
+├── utils.js        # Funciones puras (temperatura, hora, estación, clima) — testeadas con Vitest
+└── tests/
+    └── utils.test.js
 ```
 
 Sin paso de build: es HTML/CSS/JS estático, así que funciona con cualquier servidor de archivos estático.
@@ -138,6 +165,25 @@ cd codemate-weather-app
 ```
 
 Abrí `index.html` con un servidor local (por ejemplo, la extensión [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) de VS Code). Abrir el archivo directamente (`file://`) rompe las llamadas `fetch` a la API — hace falta un servidor local.
+
+### Correr los tests
+
+La lógica pura (conversión de temperatura, formato de hora, cálculo de estación, mapeo de códigos de clima) vive en `utils.js`, separada del código de DOM en `app.js`, así que se puede testear con [Vitest](https://vitest.dev/) sin necesidad de un navegador:
+
+```bash
+npm install
+npm test
+```
+
+```
+tests/utils.js (17)
+  ✓ formatTemp (3)
+  ✓ roundToHour (2)
+  ✓ formatHour (2)
+  ✓ getSeason (4)
+  ✓ locationKey (2)
+  ✓ getWeatherInfo (4)
+```
 
 ### Cómo funciona el cielo estacional
 
