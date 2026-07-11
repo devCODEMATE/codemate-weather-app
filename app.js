@@ -172,9 +172,36 @@ function iconSvg(type) {
   return icons[type] || icons.cloud;
 }
 
+// ---------- Estación del año (según hemisferio) ----------
+
+// Estaciones del hemisferio norte por mes (1-12)
+const NORTHERN_SEASON_BY_MONTH = {
+  12: "winter", 1: "winter", 2: "winter",
+  3: "spring", 4: "spring", 5: "spring",
+  6: "summer", 7: "summer", 8: "summer",
+  9: "autumn", 10: "autumn", 11: "autumn",
+};
+
+const INVERT_SEASON = { winter: "summer", summer: "winter", spring: "autumn", autumn: "spring" };
+
+function getSeason(latitude, isoTimeString) {
+  const month = Number(isoTimeString.slice(5, 7));
+  const season = NORTHERN_SEASON_BY_MONTH[month];
+  // En el hemisferio sur las estaciones están invertidas respecto al norte
+  return latitude < 0 ? INVERT_SEASON[season] : season;
+}
+
+// Paletas de cielo diurno despejado, una por estación
+const SEASON_DAY_SKY = {
+  summer: { top: "#6ec3d8", bottom: "#ffe8b0" },
+  autumn: { top: "#c98f5e", bottom: "#f4d9a0" },
+  winter: { top: "#8fb0c4", bottom: "#e3ecec" },
+  spring: { top: "#7fc9b9", bottom: "#ffe6c2" },
+};
+
 // ---------- Cielo dinámico (elemento firma) ----------
 
-function updateSky(hourNow, isDay, weatherIcon) {
+function updateSky(hourNow, isDay, weatherIcon, season) {
   const stormy = weatherIcon === "storm";
   const rainy = weatherIcon === "rain" || weatherIcon === "snow";
 
@@ -199,9 +226,10 @@ function updateSky(hourNow, isDay, weatherIcon) {
     bodyColor = "#ffd166";
     glow = "rgba(255, 209, 102, 0.45)";
   } else {
-    // Día
-    top = "#6ec3d8";
-    bottom = "#ffe8b0";
+    // Día despejado: la paleta depende de la estación del año en esa ubicación
+    const seasonSky = SEASON_DAY_SKY[season] || SEASON_DAY_SKY.summer;
+    top = seasonSky.top;
+    bottom = seasonSky.bottom;
     bodyColor = "#ffd166";
     glow = "rgba(255, 209, 102, 0.55)";
   }
@@ -283,9 +311,10 @@ function renderCurrent(data) {
   const rainProb = nowHourIndex >= 0 ? data.hourly.precipitation_probability[nowHourIndex] : 0;
   el.rainChance.textContent = `${rainProb ?? 0}%`;
 
-  // Extraemos la hora directamente del string (ya viene en hora de Buenos Aires)
+  // Extraemos la hora directamente del string (ya viene en hora local del lugar)
   const currentHour = Number(current.time.slice(11, 13));
-  updateSky(currentHour, isDay, info.icon);
+  const season = getSeason(state.location.latitude, current.time);
+  updateSky(currentHour, isDay, info.icon, season);
 }
 
 function roundToHour(isoString) {
