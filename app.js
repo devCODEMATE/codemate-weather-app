@@ -355,10 +355,13 @@ function formatDateLong(isoString) {
 }
 
 function formatHour(isoString) {
-  // Formato 24hs directo desde el string, sin pasar por Intl con AM/PM
-  // (evitaba el bug "11 a.m.h" al concatenar la unidad después del período del día)
-  const hour = Number(isoString.slice(11, 13));
-  return `${hour}h`;
+  // Tomamos la hora directo del string (formato 24hs de la API) y la
+  // convertimos a 12hs con am/pm, sin pasar por Intl (evitaba el bug
+  // "11 a.m.h" al concatenar la unidad después del período del día).
+  const hour24 = Number(isoString.slice(11, 13));
+  const period = hour24 < 12 ? "am" : "pm";
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}${period}`;
 }
 
 function formatDayShort(isoString) {
