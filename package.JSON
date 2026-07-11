@@ -1,0 +1,14 @@
+{
+  "name": "codemate-weather-app",
+  "version": "1.0.0",
+  "description": "Vanilla JS weather app with city search, seasonal sky and EN/ES i18n.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.4"
+  }
+}

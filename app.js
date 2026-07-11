@@ -3,6 +3,8 @@
    Fuente de datos: Open-Meteo (pronóstico) + Open-Meteo Geocoding (buscador)
    ========================================================================== */
 
+import { formatTemp, roundToHour, formatHour, getSeason, locationKey, getWeatherInfo } from "./utils.js";
+
 const DEFAULT_LOCATION = {
   name: "La Plata",
   place: "Buenos Aires, Argentina",
@@ -141,9 +143,7 @@ function saveFavorites(favorites) {
 // Identificamos una ubicación por lat/lon redondeadas a 2 decimales (~1km):
 // suficiente para reconocer "la misma ciudad" aunque venga de geolocalización
 // una vez y de búsqueda por texto otra, con coordenadas levemente distintas.
-function locationKey(location) {
-  return `${location.latitude.toFixed(2)}_${location.longitude.toFixed(2)}`;
-}
+// (la función en sí vive en utils.js, para poder testearla sin DOM)
 
 function isFavorite(location) {
   const key = locationKey(location);
@@ -220,42 +220,7 @@ const el = {
 };
 
 // ---------- Mapa de códigos WMO -> descripción (EN/ES) e ícono ----------
-
-const WEATHER_MAP = {
-  0: { desc: { en: "Clear sky", es: "Cielo despejado" }, icon: "sun" },
-  1: { desc: { en: "Mostly clear", es: "Mayormente despejado" }, icon: "sun-cloud" },
-  2: { desc: { en: "Partly cloudy", es: "Parcialmente nublado" }, icon: "sun-cloud" },
-  3: { desc: { en: "Cloudy", es: "Nublado" }, icon: "cloud" },
-  45: { desc: { en: "Fog", es: "Niebla" }, icon: "fog" },
-  48: { desc: { en: "Rime fog", es: "Niebla con escarcha" }, icon: "fog" },
-  51: { desc: { en: "Light drizzle", es: "Llovizna débil" }, icon: "rain" },
-  53: { desc: { en: "Drizzle", es: "Llovizna" }, icon: "rain" },
-  55: { desc: { en: "Heavy drizzle", es: "Llovizna intensa" }, icon: "rain" },
-  56: { desc: { en: "Freezing drizzle", es: "Llovizna helada" }, icon: "rain" },
-  57: { desc: { en: "Heavy freezing drizzle", es: "Llovizna helada intensa" }, icon: "rain" },
-  61: { desc: { en: "Light rain", es: "Lluvia débil" }, icon: "rain" },
-  63: { desc: { en: "Rain", es: "Lluvia" }, icon: "rain" },
-  65: { desc: { en: "Heavy rain", es: "Lluvia intensa" }, icon: "rain" },
-  66: { desc: { en: "Freezing rain", es: "Lluvia helada" }, icon: "rain" },
-  67: { desc: { en: "Heavy freezing rain", es: "Lluvia helada intensa" }, icon: "rain" },
-  71: { desc: { en: "Light snow", es: "Nevada débil" }, icon: "snow" },
-  73: { desc: { en: "Snow", es: "Nevada" }, icon: "snow" },
-  75: { desc: { en: "Heavy snow", es: "Nevada intensa" }, icon: "snow" },
-  77: { desc: { en: "Snow grains", es: "Granos de nieve" }, icon: "snow" },
-  80: { desc: { en: "Light showers", es: "Chubascos débiles" }, icon: "rain" },
-  81: { desc: { en: "Showers", es: "Chubascos" }, icon: "rain" },
-  82: { desc: { en: "Violent showers", es: "Chubascos violentos" }, icon: "rain" },
-  85: { desc: { en: "Snow showers", es: "Chubascos de nieve" }, icon: "snow" },
-  86: { desc: { en: "Heavy snow showers", es: "Chubascos de nieve intensos" }, icon: "snow" },
-  95: { desc: { en: "Thunderstorm", es: "Tormenta eléctrica" }, icon: "storm" },
-  96: { desc: { en: "Thunderstorm with hail", es: "Tormenta con granizo" }, icon: "storm" },
-  99: { desc: { en: "Severe thunderstorm with hail", es: "Tormenta severa con granizo" }, icon: "storm" },
-};
-
-function getWeatherInfo(code) {
-  const entry = WEATHER_MAP[code] || { desc: { en: "Unknown condition", es: "Condición desconocida" }, icon: "cloud" };
-  return { desc: entry.desc[state.lang], icon: entry.icon };
-}
+// (WEATHER_MAP y getWeatherInfo viven en utils.js, para poder testearlos sin DOM)
 
 // ---------- Íconos SVG (paleta CodeMate) ----------
 
@@ -315,22 +280,8 @@ function iconSvg(type) {
 
 // ---------- Estación del año (según hemisferio) ----------
 
-// Estaciones del hemisferio norte por mes (1-12)
-const NORTHERN_SEASON_BY_MONTH = {
-  12: "winter", 1: "winter", 2: "winter",
-  3: "spring", 4: "spring", 5: "spring",
-  6: "summer", 7: "summer", 8: "summer",
-  9: "autumn", 10: "autumn", 11: "autumn",
-};
-
-const INVERT_SEASON = { winter: "summer", summer: "winter", spring: "autumn", autumn: "spring" };
-
-function getSeason(latitude, isoTimeString) {
-  const month = Number(isoTimeString.slice(5, 7));
-  const season = NORTHERN_SEASON_BY_MONTH[month];
-  // En el hemisferio sur las estaciones están invertidas respecto al norte
-  return latitude < 0 ? INVERT_SEASON[season] : season;
-}
+// ---------- Estación del año (según hemisferio) ----------
+// (getSeason vive en utils.js, para poder testearla sin DOM)
 
 // Paletas de cielo diurno despejado, una por estación
 const SEASON_DAY_SKY = {
@@ -436,13 +387,7 @@ function renderParticles(season, weatherIcon) {
 }
 
 // ---------- Formato de temperatura ----------
-
-function formatTemp(celsius) {
-  if (state.unit === "F") {
-    return Math.round((celsius * 9) / 5 + 32);
-  }
-  return Math.round(celsius);
-}
+// (formatTemp vive en utils.js, para poder testearla sin DOM)
 
 // ---------- Formato de fecha/hora según idioma ----------
 
@@ -457,15 +402,7 @@ function formatDateLong(isoString) {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
-function formatHour(isoString) {
-  // Tomamos la hora directo del string (formato 24hs de la API) y la
-  // convertimos a 12hs con am/pm, sin pasar por Intl (evitaba el bug
-  // "11 a.m.h" al concatenar la unidad después del período del día).
-  const hour24 = Number(isoString.slice(11, 13));
-  const period = hour24 < 12 ? "am" : "pm";
-  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
-  return `${hour12}${period}`;
-}
+// formatHour vive en utils.js, para poder testearla sin DOM
 
 function formatDayShort(isoString) {
   const date = new Date(isoString);
@@ -480,16 +417,16 @@ function formatDayShort(isoString) {
 
 function renderCurrent(data) {
   const { current } = data;
-  const info = getWeatherInfo(current.weather_code);
+  const info = getWeatherInfo(current.weather_code, state.lang);
   const isDay = current.is_day === 1;
 
   el.cityName.textContent = `${state.location.name}, ${state.location.place}`;
   updateFavButton();
   el.dateNow.textContent = formatDateLong(current.time);
   el.currentIcon.innerHTML = iconSvg(info.icon);
-  el.currentTemp.textContent = formatTemp(current.temperature_2m);
+  el.currentTemp.textContent = formatTemp(current.temperature_2m, state.unit);
   el.currentDesc.textContent = info.desc;
-  el.feelsLike.textContent = `${formatTemp(current.apparent_temperature)}°`;
+  el.feelsLike.textContent = `${formatTemp(current.apparent_temperature, state.unit)}°`;
   el.humidity.textContent = `${Math.round(current.relative_humidity_2m)}%`;
   el.wind.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
 
@@ -505,13 +442,7 @@ function renderCurrent(data) {
   renderParticles(season, info.icon);
 }
 
-function roundToHour(isoString) {
-  // Tanto "current.time" como "hourly.time" vienen como hora local de
-  // Buenos Aires en texto plano (ej: "2026-07-11T14:30"), sin offset de UTC.
-  // Por eso truncamos el string directamente en vez de usar toISOString(),
-  // que convertiría a UTC y desalinearía la comparación.
-  return isoString.slice(0, 13) + ":00";
-}
+// roundToHour vive en utils.js, para poder testearla sin DOM
 
 function renderHourly(data) {
   const nowIndex = data.hourly.time.findIndex((time) => time === roundToHour(data.current.time));
@@ -521,8 +452,8 @@ function renderHourly(data) {
   el.hourlyScroll.innerHTML = nextHours
     .map((time, i) => {
       const idx = startIndex + i;
-      const info = getWeatherInfo(data.hourly.weather_code[idx]);
-      const temp = formatTemp(data.hourly.temperature_2m[idx]);
+      const info = getWeatherInfo(data.hourly.weather_code[idx], state.lang);
+      const temp = formatTemp(data.hourly.temperature_2m[idx], state.unit);
       const label = i === 0 ? t().now : formatHour(time);
       return `
         <div class="hour-card">
@@ -540,9 +471,9 @@ function renderDaily(data) {
 
   el.dailyList.innerHTML = days
     .map((date, i) => {
-      const info = getWeatherInfo(data.daily.weather_code[i]);
-      const max = formatTemp(data.daily.temperature_2m_max[i]);
-      const min = formatTemp(data.daily.temperature_2m_min[i]);
+      const info = getWeatherInfo(data.daily.weather_code[i], state.lang);
+      const max = formatTemp(data.daily.temperature_2m_max[i], state.unit);
+      const min = formatTemp(data.daily.temperature_2m_min[i], state.unit);
       const label = i === 0 ? t().today : formatDayShort(date);
       return `
         <div class="day-row">
