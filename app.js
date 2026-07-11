@@ -11,18 +11,80 @@ const DEFAULT_LOCATION = {
   timezone: "America/Argentina/Buenos_Aires",
 };
 
-const STORAGE_KEY = "codemate-weather-last-location";
+const LOCATION_STORAGE_KEY = "codemate-weather-last-location";
+const LANG_STORAGE_KEY = "codemate-weather-lang";
+
+// ---------- Idioma: detección + diccionario de UI ----------
+
+function detectLang() {
+  const saved = localStorage.getItem(LANG_STORAGE_KEY);
+  if (saved === "en" || saved === "es") return saved;
+
+  const browserLang = navigator.language || (navigator.languages && navigator.languages[0]) || "en";
+  return browserLang.toLowerCase().startsWith("es") ? "es" : "en";
+}
+
+const UI_TEXT = {
+  en: {
+    searchPlaceholder: "Search city or country…",
+    loading: (city) => `Loading the sky over ${city}…`,
+    timeoutError: "The connection took too long. Check your network and try again.",
+    loadError: "We couldn't load the weather right now. Try again in a few seconds.",
+    retry: "Retry",
+    noCities: "No cities found with that name",
+    searchError: "We couldn't search right now",
+    hourlyTitle: "Next hours",
+    dailyTitle: "Next days",
+    now: "Now",
+    today: "Today",
+    humidity: "Humidity",
+    wind: "Wind",
+    precipitation: "Precipitation",
+    feelsLike: "Feels like",
+    footerData: "Data by",
+    footerMade: "Made by",
+    dateLocale: "en-US",
+    geocodingLang: "en",
+  },
+  es: {
+    searchPlaceholder: "Buscar ciudad o país…",
+    loading: (city) => `Buscando el cielo de ${city}…`,
+    timeoutError: "La conexión tardó demasiado. Revisá tu red e intentá de nuevo.",
+    loadError: "No pudimos cargar el clima en este momento. Probá de nuevo en unos segundos.",
+    retry: "Reintentar",
+    noCities: "No encontramos ciudades con ese nombre",
+    searchError: "No pudimos buscar en este momento",
+    hourlyTitle: "Próximas horas",
+    dailyTitle: "Próximos días",
+    now: "Ahora",
+    today: "Hoy",
+    humidity: "Humedad",
+    wind: "Viento",
+    precipitation: "Precipitación",
+    feelsLike: "Sensación térmica",
+    footerData: "Datos de",
+    footerMade: "Hecho por",
+    dateLocale: "es-AR",
+    geocodingLang: "es",
+  },
+};
+
+function t() {
+  return UI_TEXT[state.lang];
+}
 
 // Estado en memoria
 let state = {
   unit: "C", // "C" | "F"
+  lang: detectLang(), // "en" | "es"
   data: null,
   location: loadSavedLocation(),
+  lastErrorTimedOut: false,
 };
 
 function loadSavedLocation() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_LOCATION;
   } catch {
     return DEFAULT_LOCATION;
@@ -31,9 +93,17 @@ function loadSavedLocation() {
 
 function saveLocation(location) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(location));
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(location));
   } catch {
-    // Si localStorage no está disponible (modo privado, etc.), seguimos sin guardar
+    // localStorage unavailable (private mode, etc.) — we just skip saving
+  }
+}
+
+function saveLang(lang) {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, lang);
+  } catch {
+    // localStorage unavailable — skip saving
   }
 }
 
@@ -74,46 +144,57 @@ const el = {
   dailyList: document.getElementById("dailyList"),
 
   unitToggle: document.getElementById("unitToggle"),
+  langToggle: document.getElementById("langToggle"),
 
   searchInput: document.getElementById("searchInput"),
   searchResults: document.getElementById("searchResults"),
+
+  hourlyTitle: document.getElementById("hourlyTitle"),
+  dailyTitle: document.getElementById("dailyTitle"),
+  feelsLabel: document.getElementById("feelsLabel"),
+  humidityLabel: document.getElementById("humidityLabel"),
+  windLabel: document.getElementById("windLabel"),
+  rainLabel: document.getElementById("rainLabel"),
+  footerDataText: document.getElementById("footerDataText"),
+  footerMadeText: document.getElementById("footerMadeText"),
 };
 
-// ---------- Mapa de códigos WMO -> descripción e ícono ----------
+// ---------- Mapa de códigos WMO -> descripción (EN/ES) e ícono ----------
 
 const WEATHER_MAP = {
-  0: { desc: "Cielo despejado", icon: "sun" },
-  1: { desc: "Mayormente despejado", icon: "sun-cloud" },
-  2: { desc: "Parcialmente nublado", icon: "sun-cloud" },
-  3: { desc: "Nublado", icon: "cloud" },
-  45: { desc: "Niebla", icon: "fog" },
-  48: { desc: "Niebla con escarcha", icon: "fog" },
-  51: { desc: "Llovizna débil", icon: "rain" },
-  53: { desc: "Llovizna", icon: "rain" },
-  55: { desc: "Llovizna intensa", icon: "rain" },
-  56: { desc: "Llovizna helada", icon: "rain" },
-  57: { desc: "Llovizna helada intensa", icon: "rain" },
-  61: { desc: "Lluvia débil", icon: "rain" },
-  63: { desc: "Lluvia", icon: "rain" },
-  65: { desc: "Lluvia intensa", icon: "rain" },
-  66: { desc: "Lluvia helada", icon: "rain" },
-  67: { desc: "Lluvia helada intensa", icon: "rain" },
-  71: { desc: "Nevada débil", icon: "snow" },
-  73: { desc: "Nevada", icon: "snow" },
-  75: { desc: "Nevada intensa", icon: "snow" },
-  77: { desc: "Granos de nieve", icon: "snow" },
-  80: { desc: "Chubascos débiles", icon: "rain" },
-  81: { desc: "Chubascos", icon: "rain" },
-  82: { desc: "Chubascos violentos", icon: "rain" },
-  85: { desc: "Chubascos de nieve", icon: "snow" },
-  86: { desc: "Chubascos de nieve intensos", icon: "snow" },
-  95: { desc: "Tormenta eléctrica", icon: "storm" },
-  96: { desc: "Tormenta con granizo", icon: "storm" },
-  99: { desc: "Tormenta severa con granizo", icon: "storm" },
+  0: { desc: { en: "Clear sky", es: "Cielo despejado" }, icon: "sun" },
+  1: { desc: { en: "Mostly clear", es: "Mayormente despejado" }, icon: "sun-cloud" },
+  2: { desc: { en: "Partly cloudy", es: "Parcialmente nublado" }, icon: "sun-cloud" },
+  3: { desc: { en: "Cloudy", es: "Nublado" }, icon: "cloud" },
+  45: { desc: { en: "Fog", es: "Niebla" }, icon: "fog" },
+  48: { desc: { en: "Rime fog", es: "Niebla con escarcha" }, icon: "fog" },
+  51: { desc: { en: "Light drizzle", es: "Llovizna débil" }, icon: "rain" },
+  53: { desc: { en: "Drizzle", es: "Llovizna" }, icon: "rain" },
+  55: { desc: { en: "Heavy drizzle", es: "Llovizna intensa" }, icon: "rain" },
+  56: { desc: { en: "Freezing drizzle", es: "Llovizna helada" }, icon: "rain" },
+  57: { desc: { en: "Heavy freezing drizzle", es: "Llovizna helada intensa" }, icon: "rain" },
+  61: { desc: { en: "Light rain", es: "Lluvia débil" }, icon: "rain" },
+  63: { desc: { en: "Rain", es: "Lluvia" }, icon: "rain" },
+  65: { desc: { en: "Heavy rain", es: "Lluvia intensa" }, icon: "rain" },
+  66: { desc: { en: "Freezing rain", es: "Lluvia helada" }, icon: "rain" },
+  67: { desc: { en: "Heavy freezing rain", es: "Lluvia helada intensa" }, icon: "rain" },
+  71: { desc: { en: "Light snow", es: "Nevada débil" }, icon: "snow" },
+  73: { desc: { en: "Snow", es: "Nevada" }, icon: "snow" },
+  75: { desc: { en: "Heavy snow", es: "Nevada intensa" }, icon: "snow" },
+  77: { desc: { en: "Snow grains", es: "Granos de nieve" }, icon: "snow" },
+  80: { desc: { en: "Light showers", es: "Chubascos débiles" }, icon: "rain" },
+  81: { desc: { en: "Showers", es: "Chubascos" }, icon: "rain" },
+  82: { desc: { en: "Violent showers", es: "Chubascos violentos" }, icon: "rain" },
+  85: { desc: { en: "Snow showers", es: "Chubascos de nieve" }, icon: "snow" },
+  86: { desc: { en: "Heavy snow showers", es: "Chubascos de nieve intensos" }, icon: "snow" },
+  95: { desc: { en: "Thunderstorm", es: "Tormenta eléctrica" }, icon: "storm" },
+  96: { desc: { en: "Thunderstorm with hail", es: "Tormenta con granizo" }, icon: "storm" },
+  99: { desc: { en: "Severe thunderstorm with hail", es: "Tormenta severa con granizo" }, icon: "storm" },
 };
 
 function getWeatherInfo(code) {
-  return WEATHER_MAP[code] || { desc: "Condición desconocida", icon: "cloud" };
+  const entry = WEATHER_MAP[code] || { desc: { en: "Unknown condition", es: "Condición desconocida" }, icon: "cloud" };
+  return { desc: entry.desc[state.lang], icon: entry.icon };
 }
 
 // ---------- Íconos SVG (paleta CodeMate) ----------
@@ -260,11 +341,11 @@ function formatTemp(celsius) {
   return Math.round(celsius);
 }
 
-// ---------- Formato de fecha/hora en español ----------
+// ---------- Formato de fecha/hora según idioma ----------
 
 function formatDateLong(isoString) {
   const date = new Date(isoString);
-  const formatted = new Intl.DateTimeFormat("es-AR", {
+  const formatted = new Intl.DateTimeFormat(t().dateLocale, {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -274,16 +355,15 @@ function formatDateLong(isoString) {
 }
 
 function formatHour(isoString) {
-  const date = new Date(isoString);
-  return new Intl.DateTimeFormat("es-AR", {
-    hour: "numeric",
-    timeZone: state.location.timezone,
-  }).format(date) + "h";
+  // Formato 24hs directo desde el string, sin pasar por Intl con AM/PM
+  // (evitaba el bug "11 a.m.h" al concatenar la unidad después del período del día)
+  const hour = Number(isoString.slice(11, 13));
+  return `${hour}h`;
 }
 
 function formatDayShort(isoString) {
   const date = new Date(isoString);
-  const formatted = new Intl.DateTimeFormat("es-AR", {
+  const formatted = new Intl.DateTimeFormat(t().dateLocale, {
     weekday: "short",
     timeZone: state.location.timezone,
   }).format(date);
@@ -307,7 +387,7 @@ function renderCurrent(data) {
   el.wind.textContent = `${Math.round(current.wind_speed_10m)} km/h`;
 
   // % de precipitación: tomamos la probabilidad de la hora actual del bloque hourly
-  const nowHourIndex = data.hourly.time.findIndex((t) => t === roundToHour(current.time));
+  const nowHourIndex = data.hourly.time.findIndex((time) => time === roundToHour(current.time));
   const rainProb = nowHourIndex >= 0 ? data.hourly.precipitation_probability[nowHourIndex] : 0;
   el.rainChance.textContent = `${rainProb ?? 0}%`;
 
@@ -326,7 +406,7 @@ function roundToHour(isoString) {
 }
 
 function renderHourly(data) {
-  const nowIndex = data.hourly.time.findIndex((t) => t === roundToHour(data.current.time));
+  const nowIndex = data.hourly.time.findIndex((time) => time === roundToHour(data.current.time));
   const startIndex = nowIndex >= 0 ? nowIndex : 0;
   const nextHours = data.hourly.time.slice(startIndex, startIndex + 12);
 
@@ -335,7 +415,7 @@ function renderHourly(data) {
       const idx = startIndex + i;
       const info = getWeatherInfo(data.hourly.weather_code[idx]);
       const temp = formatTemp(data.hourly.temperature_2m[idx]);
-      const label = i === 0 ? "Ahora" : formatHour(time);
+      const label = i === 0 ? t().now : formatHour(time);
       return `
         <div class="hour-card">
           <p class="hour-card__time">${label}</p>
@@ -355,7 +435,7 @@ function renderDaily(data) {
       const info = getWeatherInfo(data.daily.weather_code[i]);
       const max = formatTemp(data.daily.temperature_2m_max[i]);
       const min = formatTemp(data.daily.temperature_2m_min[i]);
-      const label = i === 0 ? "Hoy" : formatDayShort(date);
+      const label = i === 0 ? t().today : formatDayShort(date);
       return `
         <div class="day-row">
           <span class="day-row__name">${label}</span>
@@ -368,7 +448,24 @@ function renderDaily(data) {
     .join("");
 }
 
+function applyStaticText() {
+  const strings = t();
+  document.documentElement.lang = state.lang;
+  el.searchInput.placeholder = strings.searchPlaceholder;
+  el.hourlyTitle.textContent = strings.hourlyTitle;
+  el.dailyTitle.textContent = strings.dailyTitle;
+  el.feelsLabel.textContent = strings.feelsLike;
+  el.humidityLabel.textContent = strings.humidity;
+  el.windLabel.textContent = strings.wind;
+  el.rainLabel.textContent = strings.precipitation;
+  el.footerDataText.textContent = strings.footerData;
+  el.footerMadeText.textContent = strings.footerMade;
+  el.retryBtn.textContent = strings.retry;
+  el.langToggle.textContent = state.lang.toUpperCase();
+}
+
 function renderAll() {
+  applyStaticText();
   if (!state.data) return;
   renderCurrent(state.data);
   renderHourly(state.data);
@@ -382,8 +479,9 @@ function renderAll() {
 async function loadWeather() {
   // Mostramos el estado de carga y ocultamos resultados previos
   el.status.hidden = false;
-  el.statusText.textContent = `Buscando el cielo de ${state.location.name}…`;
+  el.statusText.textContent = t().loading(state.location.name);
   el.retryBtn.hidden = true;
+  el.retryBtn.textContent = t().retry;
   el.hero.hidden = true;
   el.hourlySection.hidden = true;
   el.dailySection.hidden = true;
@@ -415,9 +513,8 @@ async function loadWeather() {
     console.error("No se pudo obtener el clima:", error);
 
     const timedOut = error.name === "AbortError";
-    el.statusText.textContent = timedOut
-      ? "La conexión tardó demasiado. Revisá tu red e intentá de nuevo."
-      : "No pudimos cargar el clima en este momento. Probá de nuevo en unos segundos.";
+    state.lastErrorTimedOut = timedOut;
+    el.statusText.textContent = timedOut ? t().timeoutError : t().loadError;
     el.retryBtn.hidden = false;
   }
 }
@@ -429,7 +526,7 @@ let searchDebounceId = null;
 async function searchCities(query) {
   const url =
     `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}` +
-    `&count=8&language=es&format=json`;
+    `&count=8&language=${t().geocodingLang}&format=json`;
 
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Error HTTP ${response.status}`);
@@ -439,7 +536,7 @@ async function searchCities(query) {
 
 function renderSearchResults(results) {
   if (results.length === 0) {
-    el.searchResults.innerHTML = `<li class="search__empty">No encontramos ciudades con ese nombre</li>`;
+    el.searchResults.innerHTML = `<li class="search__empty">${t().noCities}</li>`;
     el.searchResults.hidden = false;
     return;
   }
@@ -496,7 +593,7 @@ el.searchInput.addEventListener("input", () => {
       renderSearchResults(results);
     } catch (error) {
       console.error("No se pudo buscar la ciudad:", error);
-      el.searchResults.innerHTML = `<li class="search__empty">No pudimos buscar en este momento</li>`;
+      el.searchResults.innerHTML = `<li class="search__empty">${t().searchError}</li>`;
       el.searchResults.hidden = false;
     }
   }, 400);
@@ -535,8 +632,24 @@ el.unitToggle.addEventListener("click", () => {
   renderAll();
 });
 
+el.langToggle.addEventListener("click", () => {
+  state.lang = state.lang === "en" ? "es" : "en";
+  saveLang(state.lang);
+  applyStaticText();
+  if (state.data) {
+    renderAll();
+  } else if (!el.retryBtn.hidden) {
+    // Se está mostrando un error: actualizamos ese texto al nuevo idioma
+    el.statusText.textContent = state.lastErrorTimedOut ? t().timeoutError : t().loadError;
+  } else {
+    // Todavía está cargando
+    el.statusText.textContent = t().loading(state.location.name);
+  }
+});
+
 el.retryBtn.addEventListener("click", loadWeather);
 
 // ---------- Inicio ----------
 
+applyStaticText();
 loadWeather();
