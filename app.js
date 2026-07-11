@@ -3,7 +3,7 @@
    Fuente de datos: Open-Meteo (pronóstico) + Open-Meteo Geocoding (buscador)
    ========================================================================== */
 
-import { formatTemp, roundToHour, formatHour, getSeason, locationKey, getWeatherInfo } from "./utils.js";
+import { formatTemp, roundToHour, formatHour, getSeason, locationKey, getWeatherInfo } from "./tests/utils.test.js";
 
 const DEFAULT_LOCATION = {
   name: "La Plata",
