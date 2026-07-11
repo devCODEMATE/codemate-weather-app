@@ -291,6 +291,55 @@ body {
   color: var(--purple);
 }
 
+/* ---------- Favoritos ---------- */
+
+.favorites {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 10px 0 4px;
+  padding-bottom: 2px;
+}
+
+.favorite-pill {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  padding: 7px 8px 7px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.favorite-pill:hover { background: var(--white); transform: translateY(-1px); }
+.favorite-pill:focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+
+.favorite-pill__remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.favorite-pill__remove:hover { background: rgba(7, 59, 76, 0.1); color: var(--navy); }
+.favorite-pill__remove:focus-visible { outline: 2px solid var(--purple); outline-offset: 1px; }
+
 .search__input::placeholder { color: var(--muted); }
 
 .search__input:focus-visible {
@@ -362,13 +411,54 @@ body {
   margin: 0 0 4px;
 }
 
+.hero__city-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 20px;
+}
+
 .hero__city {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 22px;
-  margin: 0 0 20px;
+  margin: 0;
   color: var(--navy);
 }
+
+.fav-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.fav-btn svg { width: 20px; height: 20px; }
+
+.fav-btn:hover { transform: scale(1.1); color: var(--purple); }
+.fav-btn:focus-visible { outline: 3px solid var(--purple); outline-offset: 2px; }
+
+.fav-btn[aria-pressed="true"] {
+  color: var(--yellow);
+}
+
+.fav-btn[aria-pressed="true"] svg { fill: var(--yellow); }
+
+.fav-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.fav-btn:disabled:hover { transform: none; }
 
 .hero__main {
   display: flex;

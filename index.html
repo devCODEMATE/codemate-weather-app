@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
-  <link rel="stylesheet" href="style.css?v=7" />
+  <link rel="stylesheet" href="style.css?v=8" />
 </head>
 <body>
 
@@ -57,6 +57,9 @@
       <ul class="search__results" id="searchResults" hidden></ul>
       <p class="geo-error" id="geoError" hidden></p>
     </div>
+
+    <!-- Favorite cities: click to jump straight to one -->
+    <div class="favorites" id="favoritesBar" hidden></div>
 
     <!-- Screen-reader-only live status, so loading/errors are announced -->
     <p class="sr-only" id="srStatus" aria-live="polite"></p>
@@ -105,7 +108,14 @@
     <!-- HERO: current condition -->
     <section class="hero" id="hero" hidden>
       <p class="hero__eyebrow" id="dateNow">—</p>
-      <h1 class="hero__city" id="cityName">La Plata, Buenos Aires</h1>
+      <div class="hero__city-row">
+        <h1 class="hero__city" id="cityName">La Plata, Buenos Aires</h1>
+        <button class="fav-btn" id="favBtn" type="button" aria-pressed="false" aria-label="Add to favorites">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 3.5l2.6 5.5 6 .8-4.4 4.2 1 6-5.2-2.9-5.2 2.9 1-6-4.4-4.2 6-.8L12 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
 
       <div class="hero__main">
         <div class="hero__icon" id="currentIcon" aria-hidden="true"></div>
@@ -155,6 +165,6 @@
 
   </main>
 
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>

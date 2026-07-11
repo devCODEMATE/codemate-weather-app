@@ -13,6 +13,8 @@ const DEFAULT_LOCATION = {
 
 const LOCATION_STORAGE_KEY = "codemate-weather-last-location";
 const LANG_STORAGE_KEY = "codemate-weather-lang";
+const FAVORITES_STORAGE_KEY = "codemate-weather-favorites";
+const MAX_FAVORITES = 5;
 
 // ---------- Idioma: detección + diccionario de UI ----------
 
@@ -50,6 +52,10 @@ const UI_TEXT = {
     geoNotSupported: "Your browser doesn't support geolocation.",
     geoDenied: "Location access was denied.",
     geoUnavailable: "We couldn't get your location. Try again.",
+    addToFavorites: "Add to favorites",
+    removeFromFavorites: "Remove from favorites",
+    removeFavorite: "Remove",
+    maxFavorites: (n) => `You can save up to ${n} favorites. Remove one to add another.`,
   },
   es: {
     searchPlaceholder: "Buscar ciudad o país…",
@@ -76,6 +82,10 @@ const UI_TEXT = {
     geoNotSupported: "Tu navegador no soporta geolocalización.",
     geoDenied: "Se denegó el acceso a tu ubicación.",
     geoUnavailable: "No pudimos obtener tu ubicación. Probá de nuevo.",
+    addToFavorites: "Agregar a favoritos",
+    removeFromFavorites: "Quitar de favoritos",
+    removeFavorite: "Quitar",
+    maxFavorites: (n) => `Podés guardar hasta ${n} favoritos. Quitá uno para agregar otro.`,
   },
 };
 
@@ -89,6 +99,7 @@ let state = {
   lang: detectLang(), // "en" | "es"
   data: null,
   location: loadSavedLocation(),
+  favorites: loadSavedFavorites(),
   lastErrorTimedOut: false,
 };
 
@@ -107,6 +118,35 @@ function saveLocation(location) {
   } catch {
     // localStorage unavailable (private mode, etc.) — we just skip saving
   }
+}
+
+function loadSavedFavorites() {
+  try {
+    const saved = localStorage.getItem(FAVORITES_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveFavorites(favorites) {
+  try {
+    localStorage.setItem(FAVORITES_STORAGE_KEY, JSON.stringify(favorites));
+  } catch {
+    // localStorage unavailable — skip saving
+  }
+}
+
+// Identificamos una ubicación por lat/lon redondeadas a 2 decimales (~1km):
+// suficiente para reconocer "la misma ciudad" aunque venga de geolocalización
+// una vez y de búsqueda por texto otra, con coordenadas levemente distintas.
+function locationKey(location) {
+  return `${location.latitude.toFixed(2)}_${location.longitude.toFixed(2)}`;
+}
+
+function isFavorite(location) {
+  const key = locationKey(location);
+  return state.favorites.some((fav) => locationKey(fav) === key);
 }
 
 function saveLang(lang) {
@@ -145,6 +185,8 @@ const el = {
   skyBody: document.getElementById("skyBody"),
 
   cityName: document.getElementById("cityName"),
+  favBtn: document.getElementById("favBtn"),
+  favoritesBar: document.getElementById("favoritesBar"),
   dateNow: document.getElementById("dateNow"),
   currentIcon: document.getElementById("currentIcon"),
   currentTemp: document.getElementById("currentTemp"),
@@ -397,6 +439,7 @@ function renderCurrent(data) {
   const isDay = current.is_day === 1;
 
   el.cityName.textContent = `${state.location.name}, ${state.location.place}`;
+  updateFavButton();
   el.dateNow.textContent = formatDateLong(current.time);
   el.currentIcon.innerHTML = iconSvg(info.icon);
   el.currentTemp.textContent = formatTemp(current.temperature_2m);
@@ -482,6 +525,8 @@ function applyStaticText() {
   el.retryBtn.textContent = strings.retry;
   el.langToggle.textContent = state.lang.toUpperCase();
   el.geoBtn.setAttribute("aria-label", strings.useMyLocation);
+  updateFavButton();
+  renderFavorites();
 }
 
 function renderAll() {
@@ -551,6 +596,84 @@ async function loadWeather() {
     el.retryBtn.hidden = false;
   }
 }
+
+// ---------- Favoritos ----------
+
+function updateFavButton() {
+  const active = isFavorite(state.location);
+  el.favBtn.setAttribute("aria-pressed", active ? "true" : "false");
+  el.favBtn.setAttribute("aria-label", active ? t().removeFromFavorites : t().addToFavorites);
+  el.favBtn.title = "";
+
+  // Si no es favorita y ya llegamos al máximo, deshabilitamos el botón de agregar
+  const atMax = !active && state.favorites.length >= MAX_FAVORITES;
+  el.favBtn.disabled = atMax;
+  if (atMax) el.favBtn.title = t().maxFavorites(MAX_FAVORITES);
+}
+
+function renderFavorites() {
+  if (state.favorites.length === 0) {
+    el.favoritesBar.hidden = true;
+    el.favoritesBar.innerHTML = "";
+    return;
+  }
+
+  el.favoritesBar.hidden = false;
+  el.favoritesBar.innerHTML = state.favorites
+    .map(
+      (fav, i) => `
+        <button class="favorite-pill" type="button" data-index="${i}">
+          ${fav.name}
+          <span class="favorite-pill__remove" data-remove-index="${i}" title="${t().removeFavorite}" role="button" tabindex="0">✕</span>
+        </button>
+      `
+    )
+    .join("");
+}
+
+el.favBtn.addEventListener("click", () => {
+  if (isFavorite(state.location)) {
+    state.favorites = state.favorites.filter((fav) => locationKey(fav) !== locationKey(state.location));
+  } else {
+    if (state.favorites.length >= MAX_FAVORITES) return;
+    state.favorites = [
+      ...state.favorites,
+      {
+        name: state.location.name,
+        place: state.location.place,
+        latitude: state.location.latitude,
+        longitude: state.location.longitude,
+      },
+    ];
+  }
+  saveFavorites(state.favorites);
+  updateFavButton();
+  renderFavorites();
+});
+
+el.favoritesBar.addEventListener("click", (event) => {
+  const removeTarget = event.target.closest("[data-remove-index]");
+  if (removeTarget) {
+    const index = Number(removeTarget.dataset.removeIndex);
+    state.favorites = state.favorites.filter((_, i) => i !== index);
+    saveFavorites(state.favorites);
+    updateFavButton();
+    renderFavorites();
+    return;
+  }
+
+  const pill = event.target.closest(".favorite-pill");
+  if (!pill) return;
+
+  const fav = state.favorites[Number(pill.dataset.index)];
+  if (!fav) return;
+
+  state.location = { ...fav };
+  saveLocation(state.location);
+  el.searchInput.value = "";
+  el.searchResults.hidden = true;
+  loadWeather();
+});
 
 // ---------- Geolocalización ----------
 
